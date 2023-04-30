@@ -3,6 +3,9 @@ from tkinter import filedialog, messagebox, ttk
 import tkinter.font as tkfont
 from PIL import ImageTk, Image
 import webbrowser
+import os
+import openpyxl
+from openpyxl.styles import Alignment, Font
 
 
 def close_win():
@@ -18,7 +21,8 @@ def open_chatbot():
 
 
 def browse_folder():
-    filedialog.askopenfilename(initialdir="Records", title="Select a File", filetypes=(("Text files", "*.txt*"), ("all files", "*.*")))
+    filepath = filedialog.askopenfilename(initialdir="Saved Files", title="Select a File", filetypes=(("All files", "*.*"), ("all files", "*.*")))
+    os.startfile(filepath)
 
 
 def open_create():
@@ -32,12 +36,56 @@ def open_create():
                 est_inc = 0
                 for item in emp_prod_profit:
                     if value_lst[0] == item[0]:
-                        est_inc = float(value_lst[2]) + float(item[1])
+                        est_inc = round_to_3(float(value_lst[2]) + float(item[1]))
                         break
                 tree_view3.set(index, 'Estimated Income', est_inc)
 
     def save_file():
-        pass
+        filename = str(entry_10.get())
+        if filename == '':
+            messagebox.showinfo('No Name', "Please Enter a name for the file.")
+        elif os.path.isfile("Saved Files/"+filename+".xlsx"):
+            messagebox.showinfo('File Exists', "File with same name already exists, please enter a different name.")
+        else:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            column_names = ["ID", "Name", "Salary", "Products Sold", "Estimated Income"]
+            ws.append(column_names)
+            for index in tree_view3.get_children():
+                item = tree_view3.item(index)['values']
+                ws.append(item)
+            ws.column_dimensions['A'].width = 25
+            ws.column_dimensions['B'].width = 30
+            ws.column_dimensions['C'].width = 20
+            ws.column_dimensions['D'].width = 15
+            ws.column_dimensions['E'].width = 29
+            ws.column_dimensions['G'].width = 28
+            ws.column_dimensions['H'].width = 18
+            i = 0
+            for i in range(len(tree_view3.get_children())+1):
+                i += 1
+                ws.cell(row=i, column=1).alignment = Alignment(horizontal='left')
+                ws.cell(row=i, column=2).alignment = Alignment(horizontal='left')
+                ws.cell(row=i, column=3).alignment = Alignment(horizontal='center')
+                ws.cell(row=i, column=4).alignment = Alignment(horizontal='center')
+                ws.cell(row=i, column=5).alignment = Alignment(horizontal='center')
+            ws.cell(row=1, column=7, value="Total Products:")
+            ws.cell(row=2, column=7, value="Profit from Product Sale:")
+            ws.cell(row=3, column=7, value="Collection excluding Products:")
+            ws.cell(row=4, column=7, value="Amount Left after Distribution:")
+            ws.cell(row=1, column=8, value=str(entry_1.get()))
+            ws.cell(row=2, column=8, value=lbl_3.cget('text'))
+            ws.cell(row=3, column=8, value=lbl_5.cget('text'))
+            ws.cell(row=4, column=8, value=lbl_16.cget('text'))
+            bold_font = Font(bold=True)
+            for i in range(5):
+                i += 1
+                ws.cell(row=i, column=7).font = bold_font
+                ws.cell(row=i, column=8).font = bold_font
+            for cell in ws[1]:
+                cell.font = bold_font
+            wb.save("Saved Files/"+filename+".xlsx")
+            messagebox.showinfo("File Saved", "The file is successfully saved in 'Saved Files' folder.")
 
     def unique_check(value):
         if value == 1:
@@ -66,6 +114,7 @@ def open_create():
         sum_prof = 0
         for record in tree_view1.get_children():
             sum_prof = sum_prof + float(tree_view1.item(record)['values'][2])
+        return sum_prof
 
     def close_action():
         messagebox_toplevel = Toplevel(root)
@@ -253,15 +302,18 @@ def open_create():
                                 if prod_real[0] == prod_img[0]:
                                     emp_profit = emp_profit + float(prod_real[2])*float(prod_img[1][:prod_img[1].index('%')])/100
                                     break
+                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
                         for item in emp_prod_profit:
                             if item == [str(entry_2.get())]:
                                 emp_prod_profit[emp_prod_profit.index(item)].append(emp_profit)
+                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
                     count_tree3 += 1
             else:
                 fill_data_msg(1, "Data Incomplete", "Please fill all the required details.")
 
     def upd_rec_tree(a):
         global products
+        global emp_prod_profit
         if a == 1:
             record_tuple = tree_view1.selection()
             record = record_tuple[0]
@@ -294,6 +346,8 @@ def open_create():
                     for child_tr2 in tree_view1.get_children():
                         if tree_view1.item(child_tr2)['values'][0] == old_value:
                             tree_view1.set(child_tr2, 'Product', entry_6.get())
+                            new_tot_prof = float(tree_view1.item(child_tr2)['values'][1])*float(tree_view2.item(record)['values'][2])
+                            tree_view1.set(child_tr2, 'Total Profit', new_tot_prof)
                     products[upd_idx] = entry_6.get()
                     cmb_box1.set('')
                     cmb_box1.config(values=products)
@@ -317,6 +371,27 @@ def open_create():
                             tot_prod = tot_prod + int(tree_view1.item(index)["values"][1])
                     value = (str(entry_2.get()), str(entry_3.get()), data, tot_prod, "-")
                     tree_view3.item(record, values=value)
+                    for item in emp_prod_profit:
+                        if item[0] == str(entry_2.get()):
+                            print(item[0], " = ", str(entry_2.get()))
+                            emp_prod_profit.remove(emp_prod_profit[emp_prod_profit.index(item)])
+                    if tot_prod != 0:
+                        emp_prod_profit.append([str(entry_2.get())])
+                        emp_profit = 0
+                        for index1 in tree_view1.get_children():
+                            for index2 in tree_view2.get_children():
+                                prod_real = tree_view1.item(index1)['values']
+                                prod_img = tree_view2.item(index2)['values']
+                                print(prod_real, "\n", prod_img)
+                                if prod_real[0] == prod_img[0]:
+                                    emp_profit = emp_profit + float(prod_real[2]) * float(
+                                        prod_img[1][:prod_img[1].index('%')]) / 100
+                                    break
+                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
+                        for item in emp_prod_profit:
+                            if item == [str(entry_2.get())]:
+                                emp_prod_profit[emp_prod_profit.index(item)].append(emp_profit)
+                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
             else:
                 fill_data_msg(1, "Data Incomplete", "Please fill all the required details.")
 
@@ -340,7 +415,11 @@ def open_create():
         if a == 3:
             records = tree_view3.selection()
             for record in records:
+                for item in emp_prod_profit:
+                    if item[0] == tree_view3.item(record)['values'][0]:
+                        emp_prod_profit.remove(item)
                 tree_view3.delete(record)
+                print(emp_prod_profit)
 
     def rem_all_rec_tree(a):
         global products
@@ -357,6 +436,7 @@ def open_create():
         if a == 3:
             for record in tree_view3.get_children():
                 tree_view3.delete(record)
+            emp_prod_profit.clear()
 
     def round_to_3(data):
         return round(data, 3)
@@ -491,7 +571,7 @@ def open_create():
                         fieldbackground="white")
         style.map('Treeview', background=[('selected', 'blue')])
 
-        btn_1 = Button(child, bg="#800000", fg="white", text="Save File", font=("Times New Roman", 20, "bold"))
+        btn_1 = Button(child, bg="#800000", fg="white", text="Save File", font=("Times New Roman", 20, "bold"), command=save_file)
         btn_1.place(x=990, y=655, width=234, height=65)
         btn_2 = Button(child, bg="#203354", fg="white", text="Estimate Incomes", font=("Times New Roman", 22, "bold"), command=estimate_inc)
         btn_2.place(x=990, y=390, width=234, height=52)
@@ -572,6 +652,12 @@ def open_create():
         lbl_17.place(x=40, y=340, width=652, height=1)
         lbl_17 = Label(child, bg="white")
         lbl_17.place(x=40, y=341, width=652, height=1)
+        lbl_18 = Label(child, fg="white", bg="#313232", text="Enter File Name:",
+                       font=("Roboto", 13, "bold"))
+        lbl_18.place(x=990, y=560, width=232, height=30)
+        lbl_19 = Label(child, fg="white", bg="#313232", text=".xlsx",
+                       font=("Caliber", 13, "bold"))
+        lbl_19.place(x=1227, y=600, width=50, height=30)
 
         entry_1 = Entry(child, justify=CENTER, validate="key", validatecommand=(validate1, "%P"))
         entry_1.place(x=183, y=1, width=155, height=30)
@@ -594,6 +680,8 @@ def open_create():
         entry_8.place(x=860, y=130, width=125, height=20)
         entry_9 = Entry(child, justify=CENTER, state=DISABLED, validate="key", validatecommand=(validate1, "%P"))
         entry_9.place(x=860, y=160, width=125, height=20)
+        entry_10 = Entry(child, justify=CENTER)
+        entry_10.place(x=990, y=600, width=232, height=30)
 
         cmb_box1 = ttk.Combobox(child, values=[], state=DISABLED)
         cmb_box1.place(x=590, y=130, width=80, height=25)
@@ -617,10 +705,10 @@ root = Tk()
 root.title("Income Estimator")
 root.geometry("540x440+0+0")
 root.resizable(False, False)
-root.iconbitmap("app_icon.ico")
+root.iconbitmap("Required Images/app_icon.ico")
 root.protocol("WM_DELETE_WINDOW", close_win)
-img = ImageTk.PhotoImage(Image.open("MainWindowImage.jpg"))
-chat_img = ImageTk.PhotoImage(Image.open("chat_image.png"))
+img = ImageTk.PhotoImage(Image.open("Required Images/MainWindowImage.jpg"))
+chat_img = ImageTk.PhotoImage(Image.open("Required Images/chat_image.png"))
 img_lbl = Label(image=img)
 img_lbl.pack()
 title_lbl = Label(root, text="Income Estimator", bg="#800000", font=("Impact", 40), fg="#FFD700", justify="center")
