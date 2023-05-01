@@ -26,19 +26,59 @@ def browse_folder():
 
 
 def open_create():
+
+    def set_reset():
+        total_collection = entry_1.get()
+        if total_collection:
+            if lbl_3.cget('text') != '-':
+                col_excluding_prof = float(total_collection) - float(lbl_3.cget('text'))
+            else:
+                col_excluding_prof = float(total_collection)
+            lbl_5.configure(text=col_excluding_prof)
+        else:
+            messagebox.showinfo('Details Incomplete', 'Please Enter the total collection.')
+
     def estimate_inc():
         global emp_prod_profit
-        for index in tree_view3.get_children():
-            value_lst = tree_view3.item(index)['values']
-            if tree_view3.item(index)['values'][3] == 0:
-                tree_view3.set(index, 'Estimated Income', value_lst[2])
-            else:
-                est_inc = 0
-                for item in emp_prod_profit:
-                    if value_lst[0] == item[0]:
-                        est_inc = round_to_3(float(value_lst[2]) + float(item[1]))
-                        break
-                tree_view3.set(index, 'Estimated Income', est_inc)
+        col_excluding_prof = 0
+        if entry_1.get() != '':
+            col_excluding_prof = round_to_3(float(lbl_5.cget('text')))
+        if tree_view3.get_children() and col_excluding_prof != 0:
+            lbl_20.configure(fg="#313232")
+            for index in tree_view3.get_children():
+                value_lst = tree_view3.item(index)['values']
+                if value_lst[3] == 0:
+                    if str(value_lst[2]).find('%') != -1:
+                        percent_salary = float(col_excluding_prof * float(value_lst[2][:str(value_lst[2]).find('%')])/100)
+                        tree_view3.set(index, 'Estimated Income', round_to_3(percent_salary))
+                    else:
+                        tree_view3.set(index, 'Estimated Income', value_lst[2])
+                else:
+                    est_inc = 0
+                    print("EMP_PROD_PROFIT: ", emp_prod_profit)
+                    for item in emp_prod_profit:
+                        print(value_lst[0], " == ", item[0])
+                        if value_lst[0] == item[0]:
+                            print(str(value_lst[2]).find('%'))
+                            if str(value_lst[2]).find('%') != -1:
+                                percent_salary = float(
+                                    col_excluding_prof * float(value_lst[2][:str(value_lst[2]).find('%')]) / 100)
+                                est_inc = round_to_3(percent_salary + float(item[1]))
+                                break
+                            else:
+                                print(round_to_3(float(value_lst[2]) + float(item[1])))
+                                est_inc = round_to_3(float(value_lst[2]) + float(item[1]))
+                                break
+                    tree_view3.set(index, 'Estimated Income', est_inc)
+            amt_distributed = 0
+            for index in tree_view3.get_children():
+                new_value_lst = tree_view3.item(index)['values']
+                amt_distributed += float(new_value_lst[4])
+            amt_after_distribution = float(entry_1.get()) - float(amt_distributed)
+            lbl_16.configure(text=round_to_3(amt_after_distribution))
+
+        else:
+            messagebox.showinfo('Detatils Incomplete', 'Please fill all required fields.')
 
     def save_file():
         filename = str(entry_10.get())
@@ -69,7 +109,7 @@ def open_create():
                 ws.cell(row=i, column=3).alignment = Alignment(horizontal='center')
                 ws.cell(row=i, column=4).alignment = Alignment(horizontal='center')
                 ws.cell(row=i, column=5).alignment = Alignment(horizontal='center')
-            ws.cell(row=1, column=7, value="Total Products:")
+            ws.cell(row=1, column=7, value="Total Collection:")
             ws.cell(row=2, column=7, value="Profit from Product Sale:")
             ws.cell(row=3, column=7, value="Collection excluding Products:")
             ws.cell(row=4, column=7, value="Amount Left after Distribution:")
@@ -82,6 +122,7 @@ def open_create():
                 i += 1
                 ws.cell(row=i, column=7).font = bold_font
                 ws.cell(row=i, column=8).font = bold_font
+                ws.cell(row=i, column=8).alignment = Alignment(horizontal='center')
             for cell in ws[1]:
                 cell.font = bold_font
             wb.save("Saved Files/"+filename+".xlsx")
@@ -110,18 +151,12 @@ def open_create():
                     break
             return exists3
 
-    def prod_profit():
-        sum_prof = 0
-        for record in tree_view1.get_children():
-            sum_prof = sum_prof + float(tree_view1.item(record)['values'][2])
-        return sum_prof
-
     def close_action():
         messagebox_toplevel = Toplevel(root)
         messagebox_toplevel.title("Invisible")
         messagebox_toplevel.geometry("0x0+0+0")
         messagebox_toplevel.resizable(False, False)
-        messagebox_toplevel.iconbitmap("app_icon.ico")
+        messagebox_toplevel.iconbitmap("Required Images/app_icon.ico")
         messagebox_toplevel.overrideredirect(True)
         messagebox_toplevel.grab_set()
         if messagebox.askokcancel("Close Window?", "All unsaved data will be lost, do you want to continue?"):
@@ -231,7 +266,7 @@ def open_create():
         messagebox_toplevel.title("Invisible")
         messagebox_toplevel.geometry("0x0+0+0")
         messagebox_toplevel.resizable(False, False)
-        messagebox_toplevel.iconbitmap("app_icon.ico")
+        messagebox_toplevel.iconbitmap("Required Images/app_icon.ico")
         messagebox_toplevel.overrideredirect(True)
         messagebox_toplevel.grab_set()
         if num == 1:
@@ -253,7 +288,7 @@ def open_create():
                     for index in tree_view2.get_children():
                         tree2_list = tree_view2.item(index)["values"]
                         if cmb_box1.get() == tree2_list[0]:
-                            t_profit = float(tree2_list[2]) * int(entry_5.get())
+                            t_profit = round_to_3(float(tree2_list[2]) * int(entry_5.get()))
                     value = (cmb_box1.get(), int(entry_5.get()), t_profit)
                     tag = ('bluerow',)
                     tree_view1.insert(parent="", index="end", iid=str(count_tree1), text="", values=value, tags=tag)
@@ -280,6 +315,7 @@ def open_create():
                 if unique_check(3):
                     messagebox.showinfo('Identical Values', 'Please Enter Unique Employee ID.')
                 else:
+                    lbl_20.configure(fg="yellow")
                     data = 0
                     tot_prod = 0
                     if v2.get() == 1:
@@ -292,9 +328,12 @@ def open_create():
                     value = (str(entry_2.get()), str(entry_3.get()), data, tot_prod, "-")
                     tag = ('bluerow',)
                     tree_view3.insert(parent="", index="end", iid=str(count_tree3), text="", values=value, tags=tag)
+                    count_tree3 += 1
                     if tot_prod != 0:
+                        chk_btn1.configure(state=DISABLED)
                         emp_prod_profit.append([str(entry_2.get())])
                         emp_profit = 0
+                        tot_prod_profit = 0
                         for index1 in tree_view1.get_children():
                             for index2 in tree_view2.get_children():
                                 prod_real = tree_view1.item(index1)['values']
@@ -302,18 +341,29 @@ def open_create():
                                 if prod_real[0] == prod_img[0]:
                                     emp_profit = emp_profit + float(prod_real[2])*float(prod_img[1][:prod_img[1].index('%')])/100
                                     break
-                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
                         for item in emp_prod_profit:
                             if item == [str(entry_2.get())]:
                                 emp_prod_profit[emp_prod_profit.index(item)].append(emp_profit)
-                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
-                    count_tree3 += 1
+                        for index1 in tree_view1.get_children():
+                            tot_prod_profit += float(tree_view1.item(index1)['values'][2])
+                        round_to_3(tot_prod_profit)
+                        for item in emp_prod_profit:
+                            if item[0] == str(entry_2.get()):
+                                emp_prod_profit[emp_prod_profit.index(item)].append(tot_prod_profit)
+                                break
+                        final_prod_profit = 0
+                        for i in range(len(emp_prod_profit)):
+                            final_prod_profit += emp_prod_profit[i][2]
+                            i += 1
+                        lbl_3.configure(text=final_prod_profit)
+                        if entry_1.get() != '':
+                            col_excluding_prof = float(entry_1.get()) - float(lbl_3.cget('text'))
+                            lbl_5.configure(text=col_excluding_prof)
             else:
                 fill_data_msg(1, "Data Incomplete", "Please fill all the required details.")
 
     def upd_rec_tree(a):
-        global products
-        global emp_prod_profit
+        global products, emp_prod_profit
         if a == 1:
             record_tuple = tree_view1.selection()
             record = record_tuple[0]
@@ -360,6 +410,7 @@ def open_create():
                 if unique_check(3) and str(tree_view3.item(record)['values'][0]) != str(entry_2.get()):
                     messagebox.showinfo('Identical Values', 'Please Enter Unique Employee ID.')
                 else:
+                    lbl_20.configure(fg="yellow")
                     data = 0
                     tot_prod = 0
                     if v2.get() == 1:
@@ -375,9 +426,12 @@ def open_create():
                         if item[0] == str(entry_2.get()):
                             print(item[0], " = ", str(entry_2.get()))
                             emp_prod_profit.remove(emp_prod_profit[emp_prod_profit.index(item)])
+                    chk_btn1.configure(state=NORMAL)
                     if tot_prod != 0:
+                        chk_btn1.configure(state=DISABLED)
                         emp_prod_profit.append([str(entry_2.get())])
                         emp_profit = 0
+                        tot_prod_profit = 0
                         for index1 in tree_view1.get_children():
                             for index2 in tree_view2.get_children():
                                 prod_real = tree_view1.item(index1)['values']
@@ -389,14 +443,29 @@ def open_create():
                                     break
                         print("EMP_PROD_PROFIT: ", emp_prod_profit)
                         for item in emp_prod_profit:
-                            if item == [str(entry_2.get())]:
+                            if item == str(entry_2.get()):
                                 emp_prod_profit[emp_prod_profit.index(item)].append(emp_profit)
+                        for index1 in tree_view1.get_children():
+                            tot_prod_profit += float(tree_view1.item(index1)['values'][2])
+                        round_to_3(tot_prod_profit)
+                        for item in emp_prod_profit:
+                            if item[0] == str(entry_2.get()):
+                                emp_prod_profit[emp_prod_profit.index(item)].append(tot_prod_profit)
+                                break
+                        final_prod_profit = 0
+                        for i in range(len(emp_prod_profit)):
+                            final_prod_profit += emp_prod_profit[i][2]
+                            i += 1
+                        lbl_3.configure(text=final_prod_profit)
+                        if entry_1.get() != '':
+                            col_excluding_prof = float(entry_1.get()) - float(lbl_3.cget('text'))
+                            lbl_5.configure(text=col_excluding_prof)
                         print("EMP_PROD_PROFIT: ", emp_prod_profit)
             else:
                 fill_data_msg(1, "Data Incomplete", "Please fill all the required details.")
 
     def rem_select_rec_tree(a):
-        global products
+        global products, emp_prod_profit
         if a == 1:
             records = tree_view1.selection()
             for record in records:
@@ -413,16 +482,35 @@ def open_create():
                 cmb_box1.set('')
                 cmb_box1.config(values=products)
         if a == 3:
+            if tree_view3.get_children() != ():
+                lbl_20.configure(fg="yellow")
             records = tree_view3.selection()
+            no_prods = True
             for record in records:
                 for item in emp_prod_profit:
                     if item[0] == tree_view3.item(record)['values'][0]:
                         emp_prod_profit.remove(item)
                 tree_view3.delete(record)
+                final_prod_profit = 0
+                for i in range(len(emp_prod_profit)):
+                    final_prod_profit += emp_prod_profit[i][2]
+                    i += 1
+                lbl_3.configure(text=final_prod_profit)
+                if entry_1.get() != '':
+                    col_excluding_prof = float(entry_1.get()) - float(lbl_3.cget('text'))
+                    lbl_5.configure(text=col_excluding_prof)
                 print(emp_prod_profit)
+            for index in tree_view3.get_children():
+                if tree_view3.item(index)['values'][3] != 0:
+                    no_prods = False
+                    break
+            if no_prods:
+                chk_btn1.configure(state=NORMAL)
+            if tree_view3.get_children() == ():
+                lbl_16.configure(text='-')
 
     def rem_all_rec_tree(a):
-        global products
+        global products, emp_prod_profit
         if a == 1:
             for record in tree_view1.get_children():
                 tree_view1.delete(record)
@@ -434,9 +522,18 @@ def open_create():
                 tree_view2.delete(record)
                 rem_all_rec_tree(1)
         if a == 3:
+            if tree_view3.get_children() != ():
+                lbl_20.configure(fg="yellow")
             for record in tree_view3.get_children():
                 tree_view3.delete(record)
             emp_prod_profit.clear()
+            chk_btn1.configure(state=NORMAL)
+            lbl_3.configure(text='-')
+            if entry_1.get() == '':
+                lbl_5.configure(text='-')
+            else:
+                lbl_5.configure(text=entry_1.get())
+            lbl_16.configure(text='-')
 
     def round_to_3(data):
         return round(data, 3)
@@ -488,7 +585,7 @@ def open_create():
         child.configure(bg="#313232")
         child.protocol("WM_DELETE_WINDOW", close_action)
         child.bind("<Unmap>", on_child_min)
-        child.iconbitmap("app_icon.ico")
+        child.iconbitmap("Required Images/app_icon.ico")
 
         validate1 = child.register(validate_if_float)
         validate2 = child.register(validate_percent)
@@ -601,7 +698,7 @@ def open_create():
         btn_14.place(x=760, y=320, width=211, height=30)
         btn_15 = Button(child, bg="#494949", image=chat_img, font=f, command=open_chatbot)
         btn_15.place(x=1244, y=655, width=75, height=60)
-        btn_16 = Button(child, bg="#800000", fg="white", text="Set/Reset", font=("Times New Roman", 15, 'bold'))
+        btn_16 = Button(child, bg="#800000", fg="white", text="Set/Reset", font=("Times New Roman", 15, 'bold'), command=set_reset)
         btn_16.place(x=350, y=1, width=155, height=30)
 
         v1 = IntVar()
@@ -658,6 +755,8 @@ def open_create():
         lbl_19 = Label(child, fg="white", bg="#313232", text=".xlsx",
                        font=("Caliber", 13, "bold"))
         lbl_19.place(x=1227, y=600, width=50, height=30)
+        lbl_20 = Label(child, fg="#313232", bg="#313232", justify=LEFT, text="<--\nValues\nUpdated !", font=("Roboto", 13, 'bold'))
+        lbl_20.place(x=1230, y=390, width=115, height=55)
 
         entry_1 = Entry(child, justify=CENTER, validate="key", validatecommand=(validate1, "%P"))
         entry_1.place(x=183, y=1, width=155, height=30)
