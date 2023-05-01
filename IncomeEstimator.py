@@ -55,18 +55,14 @@ def open_create():
                         tree_view3.set(index, 'Estimated Income', value_lst[2])
                 else:
                     est_inc = 0
-                    print("EMP_PROD_PROFIT: ", emp_prod_profit)
                     for item in emp_prod_profit:
-                        print(value_lst[0], " == ", item[0])
-                        if value_lst[0] == item[0]:
-                            print(str(value_lst[2]).find('%'))
+                        if str(value_lst[0]) == str(item[0]):
                             if str(value_lst[2]).find('%') != -1:
                                 percent_salary = float(
                                     col_excluding_prof * float(value_lst[2][:str(value_lst[2]).find('%')]) / 100)
                                 est_inc = round_to_3(percent_salary + float(item[1]))
                                 break
                             else:
-                                print(round_to_3(float(value_lst[2]) + float(item[1])))
                                 est_inc = round_to_3(float(value_lst[2]) + float(item[1]))
                                 break
                     tree_view3.set(index, 'Estimated Income', est_inc)
@@ -160,8 +156,9 @@ def open_create():
         messagebox_toplevel.overrideredirect(True)
         messagebox_toplevel.grab_set()
         if messagebox.askokcancel("Close Window?", "All unsaved data will be lost, do you want to continue?"):
-            global window_counter1, count_tree1, count_tree2, count_tree3
+            global window_counter1, count_tree1, count_tree2, count_tree3, products, emp_prod_profit
             count_tree1 = count_tree2 = count_tree3 = 0
+            products = emp_prod_profit = []
             window_counter1 -= 1
             child.destroy()
             root.deiconify()
@@ -342,7 +339,7 @@ def open_create():
                                     emp_profit = emp_profit + float(prod_real[2])*float(prod_img[1][:prod_img[1].index('%')])/100
                                     break
                         for item in emp_prod_profit:
-                            if item == [str(entry_2.get())]:
+                            if item[0] == str(entry_2.get()):
                                 emp_prod_profit[emp_prod_profit.index(item)].append(emp_profit)
                         for index1 in tree_view1.get_children():
                             tot_prod_profit += float(tree_view1.item(index1)['values'][2])
@@ -413,6 +410,7 @@ def open_create():
                     lbl_20.configure(fg="yellow")
                     data = 0
                     tot_prod = 0
+                    no_prods = True
                     if v2.get() == 1:
                         data = entry_4.get()
                     elif v2.get() == 2:
@@ -422,11 +420,18 @@ def open_create():
                             tot_prod = tot_prod + int(tree_view1.item(index)["values"][1])
                     value = (str(entry_2.get()), str(entry_3.get()), data, tot_prod, "-")
                     tree_view3.item(record, values=value)
+                    print("EMP_PROD_PROFIT: ", emp_prod_profit)
                     for item in emp_prod_profit:
                         if item[0] == str(entry_2.get()):
                             print(item[0], " = ", str(entry_2.get()))
                             emp_prod_profit.remove(emp_prod_profit[emp_prod_profit.index(item)])
-                    chk_btn1.configure(state=NORMAL)
+                    print("EMP_PROD_PROFIT: ", emp_prod_profit)
+                    for index in tree_view3.get_children():
+                        if tree_view3.item(index)['values'][3] != 0:
+                            no_prods = False
+                            break
+                    if no_prods:
+                        chk_btn1.configure(state=NORMAL)
                     if tot_prod != 0:
                         chk_btn1.configure(state=DISABLED)
                         emp_prod_profit.append([str(entry_2.get())])
@@ -436,22 +441,24 @@ def open_create():
                             for index2 in tree_view2.get_children():
                                 prod_real = tree_view1.item(index1)['values']
                                 prod_img = tree_view2.item(index2)['values']
-                                print(prod_real, "\n", prod_img)
                                 if prod_real[0] == prod_img[0]:
                                     emp_profit = emp_profit + float(prod_real[2]) * float(
                                         prod_img[1][:prod_img[1].index('%')]) / 100
                                     break
+                        print("EMP_PROFIT: ", emp_profit)
                         print("EMP_PROD_PROFIT: ", emp_prod_profit)
                         for item in emp_prod_profit:
-                            if item == str(entry_2.get()):
+                            print(item, " == ", entry_2.get(), "\nTypes: ", type(item), " ?= ", type(entry_2.get()))
+                            if item[0] == str(entry_2.get()):
                                 emp_prod_profit[emp_prod_profit.index(item)].append(emp_profit)
+                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
                         for index1 in tree_view1.get_children():
                             tot_prod_profit += float(tree_view1.item(index1)['values'][2])
-                        round_to_3(tot_prod_profit)
                         for item in emp_prod_profit:
                             if item[0] == str(entry_2.get()):
-                                emp_prod_profit[emp_prod_profit.index(item)].append(tot_prod_profit)
+                                emp_prod_profit[emp_prod_profit.index(item)].append(round_to_3(tot_prod_profit))
                                 break
+                        print("EMP_PROD_PROFIT: ", emp_prod_profit)
                         final_prod_profit = 0
                         for i in range(len(emp_prod_profit)):
                             final_prod_profit += emp_prod_profit[i][2]
@@ -496,10 +503,10 @@ def open_create():
                     final_prod_profit += emp_prod_profit[i][2]
                     i += 1
                 lbl_3.configure(text=final_prod_profit)
-                if entry_1.get() != '':
-                    col_excluding_prof = float(entry_1.get()) - float(lbl_3.cget('text'))
-                    lbl_5.configure(text=col_excluding_prof)
-                print(emp_prod_profit)
+            if entry_1.get() != '':
+                col_excluding_prof = float(entry_1.get()) - float(lbl_3.cget('text'))
+                lbl_5.configure(text=col_excluding_prof)
+            print(emp_prod_profit)
             for index in tree_view3.get_children():
                 if tree_view3.item(index)['values'][3] != 0:
                     no_prods = False
